@@ -68,6 +68,64 @@ class App(ctk.CTk):
         self.is_downloading = False
 
         self._build_ui()
+        self._fix_ime_clipboard()
+
+    # ── IME clipboard fix (Korean, Japanese, etc.) ────────────────────
+
+    def _fix_ime_clipboard(self):
+        """Fix Cmd+C/V/X/A when non-English IME is active on macOS.
+
+        In English mode, <Command-v> fires normally and handles paste.
+        In Korean/CJK mode, <Command-v> doesn't fire, but <Command-KeyPress>
+        fires with keysym='??' and the same keycode. We use keycode >> 24
+        to get the macOS virtual keycode (physical key) and handle it manually.
+        """
+        inner = self.url_entry._entry
+        inner.bind("<Command-KeyPress>", self._on_cmd_keypress)
+
+    # macOS virtual keycodes (from Events.h)
+    _VK_A = 0x00
+    _VK_X = 0x07
+    _VK_C = 0x08
+    _VK_V = 0x09
+
+    def _on_cmd_keypress(self, event):
+        vk = event.keycode >> 24
+        # Only act when keysym is unknown (IME active) — English works by default
+        if event.keysym != "??":
+            return
+
+        w = event.widget
+        if vk == self._VK_V:  # Paste
+            try:
+                text = self.clipboard_get()
+                try:
+                    w.delete("sel.first", "sel.last")
+                except Exception:
+                    pass
+                w.insert("insert", text)
+            except Exception:
+                pass
+            return "break"
+        elif vk == self._VK_C:  # Copy
+            try:
+                self.clipboard_clear()
+                self.clipboard_append(w.selection_get())
+            except Exception:
+                pass
+            return "break"
+        elif vk == self._VK_X:  # Cut
+            try:
+                self.clipboard_clear()
+                self.clipboard_append(w.selection_get())
+                w.delete("sel.first", "sel.last")
+            except Exception:
+                pass
+            return "break"
+        elif vk == self._VK_A:  # Select All
+            w.select_range(0, "end")
+            w.icursor("end")
+            return "break"
 
     # ── UI Construction ──────────────────────────────────────────────
 

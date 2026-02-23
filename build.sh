@@ -25,6 +25,8 @@ pyinstaller \
     --hidden-import "certifi" \
     --collect-all "customtkinter" \
     --collect-all "certifi" \
+    --add-binary "$(which ffmpeg):." \
+    --add-binary "$(which ffprobe):." \
     main.py
 
 # Ad-hoc code sign to prevent "damaged app" error

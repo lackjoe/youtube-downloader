@@ -16,12 +16,15 @@ jobs:
         with:
           python-version: '3.11'
 
+      - name: Install ffmpeg
+        run: choco install ffmpeg -y
+
       - name: Install dependencies
         run: pip install -r requirements.txt
 
       - name: Build with PyInstaller
         run: |
-          pyinstaller --name "YouTube Downloader" --windowed --onedir --noconfirm --hidden-import "yt_dlp" --hidden-import "customtkinter" --hidden-import "certifi" --collect-all "customtkinter" --collect-all "certifi" main.py
+          pyinstaller --name "YouTube Downloader" --windowed --onedir --noconfirm --hidden-import "yt_dlp" --hidden-import "customtkinter" --hidden-import "certifi" --collect-all "customtkinter" --collect-all "certifi" --add-binary "$(where ffmpeg);." --add-binary "$(where ffprobe);." main.py
 
       - name: Zip output
         run: Compress-Archive -Path "dist/YouTube Downloader" -DestinationPath "YouTube-Downloader-Windows.zip"
@@ -40,12 +43,15 @@ jobs:
         with:
           python-version: '3.11'
 
+      - name: Install ffmpeg
+        run: brew install ffmpeg
+
       - name: Install dependencies
         run: pip install -r requirements.txt
 
       - name: Build with PyInstaller
         run: |
-          pyinstaller --name "YouTube Downloader" --windowed --onedir --noconfirm --hidden-import "yt_dlp" --hidden-import "customtkinter" --hidden-import "certifi" --collect-all "customtkinter" --collect-all "certifi" main.py
+          pyinstaller --name "YouTube Downloader" --windowed --onedir --noconfirm --hidden-import "yt_dlp" --hidden-import "customtkinter" --hidden-import "certifi" --collect-all "customtkinter" --collect-all "certifi" --add-binary "$(which ffmpeg):." --add-binary "$(which ffprobe):." main.py
 
       - name: Zip output
         run: cd dist && zip -r ../YouTube-Downloader-macOS.zip "YouTube Downloader.app"

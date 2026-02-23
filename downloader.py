@@ -1,10 +1,21 @@
 """yt-dlp wrapper for YouTube downloading."""
 
+import os
+import ssl
+import sys
 import threading
 from pathlib import Path
 from typing import Callable, Optional
 
+import certifi
 import yt_dlp
+
+# Fix SSL for PyInstaller bundles - set before any network calls
+os.environ["SSL_CERT_FILE"] = certifi.where()
+os.environ["REQUESTS_CA_BUNDLE"] = certifi.where()
+ssl._create_default_https_context = lambda purpose=None, cafile=None, capath=None: ssl.create_default_context(
+    purpose=purpose or ssl.Purpose.SERVER_AUTH, cafile=certifi.where()
+)
 
 
 class VideoInfo:
@@ -53,11 +64,23 @@ AUDIO_QUALITY_LABELS = {
 }
 
 
+def _get_ffmpeg_path() -> str | None:
+    """Return path to bundled ffmpeg, or None to use system default."""
+    if getattr(sys, "frozen", False):
+        # PyInstaller bundle: ffmpeg is in the same dir as the executable
+        bundle_dir = Path(sys._MEIPASS)
+        ffmpeg = bundle_dir / "ffmpeg"
+        if ffmpeg.exists():
+            return str(bundle_dir)
+    return None
+
+
 class Downloader:
     """Wraps yt-dlp for fetching info and downloading."""
 
     def __init__(self):
         self._cancel_event = threading.Event()
+        self._ffmpeg_path = _get_ffmpeg_path()
 
     def fetch_info(self, url: str) -> VideoInfo:
         """Fetch video/playlist metadata without downloading."""
@@ -66,6 +89,8 @@ class Downloader:
             "no_warnings": True,
             "extract_flat": "in_playlist",
         }
+        if self._ffmpeg_path:
+            opts["ffmpeg_location"] = self._ffmpeg_path
         with yt_dlp.YoutubeDL(opts) as ydl:
             data = ydl.extract_info(url, download=False)
         return VideoInfo(data)
@@ -101,6 +126,8 @@ class Downloader:
             "no_warnings": True,
             "noplaylist": True,
         }
+        if self._ffmpeg_path:
+            opts["ffmpeg_location"] = self._ffmpeg_path
 
         # Format selection
         if fmt == FORMAT_AUDIO_ONLY:
