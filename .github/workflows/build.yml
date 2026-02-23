@@ -1,0 +1,55 @@
+name: Build YouTube Downloader
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Build with PyInstaller
+        run: |
+          pyinstaller --name "YouTube Downloader" --windowed --onedir --noconfirm --add-data "assets;assets" --hidden-import "yt_dlp" --hidden-import "customtkinter" --collect-all "customtkinter" main.py
+
+      - name: Zip output
+        run: Compress-Archive -Path "dist/YouTube Downloader" -DestinationPath "YouTube-Downloader-Windows.zip"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: YouTube-Downloader-Windows
+          path: YouTube-Downloader-Windows.zip
+
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Build with PyInstaller
+        run: bash build.sh
+
+      - name: Zip output
+        run: cd dist && zip -r ../YouTube-Downloader-macOS.zip "YouTube Downloader.app"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: YouTube-Downloader-macOS
+          path: YouTube-Downloader-macOS.zip
