@@ -151,7 +151,7 @@ class App(ctk.CTk):
         self.progress_pct = ctk.CTkLabel(prog_frame, text="0%", width=45)
         self.progress_pct.pack(side="right")
 
-        self.status_label = ctk.CTkLabel(self, text="대기 중", text_color="gray")
+        self.status_label = ctk.CTkLabel(self, text="대기 중", text_color="gray", wraplength=650)
         self.status_label.pack(pady=(0, 4))
 
         # Action buttons
@@ -314,7 +314,10 @@ class App(ctk.CTk):
                 icon, color = "⏸", "gray"
 
             ctk.CTkLabel(row, text=f"{i + 1}.", width=30).pack(side="left")
-            ctk.CTkLabel(row, text=item.title, anchor="w", wraplength=400).pack(side="left", fill="x", expand=True)
+            title_text = item.title
+            if item.status == QueueItem.STATUS_ERROR and item.error_msg:
+                title_text += f"\n  >> {item.error_msg}"
+            ctk.CTkLabel(row, text=title_text, anchor="w", wraplength=500, justify="left").pack(side="left", fill="x", expand=True)
             ctk.CTkLabel(row, text=icon, text_color=color, width=30).pack(side="right", padx=(4, 0))
 
             if item.status == QueueItem.STATUS_PENDING:
@@ -360,9 +363,11 @@ class App(ctk.CTk):
             except Exception as e:
                 item.status = QueueItem.STATUS_ERROR
                 item.error_msg = str(e)
-                if "Cancelled" in str(e):
+                err = str(e)
+                if "Cancelled" in err:
                     self.after(0, lambda: self._set_status("다운로드 취소됨", "orange"))
                     break
+                self.after(0, lambda err=err: self._set_status(f"실패: {err}", "red"))
 
             self.after(0, self._refresh_queue_ui)
 
