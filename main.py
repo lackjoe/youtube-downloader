@@ -248,9 +248,13 @@ class App(ctk.CTk):
         self.cancel_btn.pack(side="right")
 
         # Queue / History
-        ctk.CTkLabel(self, text="다운로드 큐 / 이력", font=ctk.CTkFont(size=14, weight="bold"), anchor="w").pack(
-            fill="x", padx=20, pady=(8, 2)
-        )
+        queue_header = ctk.CTkFrame(self, fg_color="transparent")
+        queue_header.pack(fill="x", padx=20, pady=(8, 2))
+
+        ctk.CTkLabel(queue_header, text="다운로드 큐 / 이력", font=ctk.CTkFont(size=14, weight="bold"), anchor="w").pack(side="left")
+
+        self.clear_done_btn = ctk.CTkButton(queue_header, text="이력 지우기", width=90, height=28, command=self._clear_done)
+        self.clear_done_btn.pack(side="right")
 
         self.queue_frame = ctk.CTkScrollableFrame(self, height=200)
         self.queue_frame.pack(fill="both", expand=True, padx=20, pady=(0, 14))
@@ -397,19 +401,29 @@ class App(ctk.CTk):
             ctk.CTkLabel(row, text=title_text, anchor="w", wraplength=500, justify="left").pack(side="left", fill="x", expand=True)
             ctk.CTkLabel(row, text=icon, text_color=color, width=30).pack(side="right", padx=(4, 0))
 
-            if item.status == QueueItem.STATUS_PENDING:
+            if item.status != QueueItem.STATUS_DOWNLOADING:
                 def _remove(idx=i):
                     self.queue.pop(idx)
                     self._refresh_queue_ui()
                 ctk.CTkButton(row, text="✕", width=28, height=28, fg_color="#dc3545", hover_color="#c82333", command=_remove).pack(side="right", padx=2)
 
+    def _clear_done(self):
+        """Remove completed and errored items from queue."""
+        self.queue = [q for q in self.queue if q.status in (QueueItem.STATUS_PENDING, QueueItem.STATUS_DOWNLOADING)]
+        self._refresh_queue_ui()
+        self.progress_bar.set(0)
+        self.progress_pct.configure(text="0%")
+        self._set_status("대기 중", "gray")
+
     # ── Download ─────────────────────────────────────────────────────
 
     def _start_download(self):
-        # If queue is empty, add current URL first
-        if not self.queue:
+        # If no pending items, try adding current URL
+        pending = [q for q in self.queue if q.status == QueueItem.STATUS_PENDING]
+        if not pending:
             self._add_to_queue()
-        if not self.queue:
+        pending = [q for q in self.queue if q.status == QueueItem.STATUS_PENDING]
+        if not pending:
             return
 
         self.is_downloading = True
