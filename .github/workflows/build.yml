@@ -22,15 +22,19 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Build with PyInstaller
-        shell: bash
+      - name: Find ffmpeg paths
+        id: ffmpeg
         run: |
-          FFMPEG_PATH=$(which ffmpeg)
-          FFPROBE_PATH=$(which ffprobe)
-          pyinstaller --name "YouTube Downloader" --windowed --onedir --noconfirm \
-            --hidden-import "yt_dlp" --hidden-import "customtkinter" --hidden-import "certifi" \
-            --collect-all "customtkinter" --collect-all "certifi" \
-            --add-binary "$FFMPEG_PATH;." --add-binary "$FFPROBE_PATH;." \
+          echo "ffmpeg=$(where ffmpeg | head -1)" >> $env:GITHUB_OUTPUT
+          echo "ffprobe=$(where ffprobe | head -1)" >> $env:GITHUB_OUTPUT
+
+      - name: Build with PyInstaller
+        run: |
+          pyinstaller --name "YouTube Downloader" --windowed --onedir --noconfirm `
+            --hidden-import "yt_dlp" --hidden-import "customtkinter" --hidden-import "certifi" `
+            --collect-all "customtkinter" --collect-all "certifi" `
+            --add-binary "${{ steps.ffmpeg.outputs.ffmpeg }};." `
+            --add-binary "${{ steps.ffmpeg.outputs.ffprobe }};." `
             main.py
 
       - name: Zip output
