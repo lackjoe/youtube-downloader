@@ -1,19 +1,35 @@
 """YouTube Downloader - CustomTkinter GUI Application."""
 
 import io
+import logging
 import os
 import ssl
 import sys
 import threading
+import traceback
 from pathlib import Path
 from tkinter import filedialog
 from urllib.request import urlopen
+
+# Setup logging to file on user's Desktop
+_log_path = Path.home() / "Desktop" / "yt_downloader_log.txt"
+logging.basicConfig(
+    filename=str(_log_path),
+    level=logging.DEBUG,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+)
+log = logging.getLogger("ytdl")
+log.info("=== App started ===")
+log.info(f"Python: {sys.version}")
+log.info(f"Platform: {sys.platform}")
+log.info(f"Frozen: {getattr(sys, 'frozen', False)}")
 
 # Fix SSL certificate issue in PyInstaller bundle
 if getattr(sys, "frozen", False):
     import certifi
     os.environ["SSL_CERT_FILE"] = certifi.where()
     os.environ["REQUESTS_CA_BUNDLE"] = certifi.where()
+    log.info(f"SSL_CERT_FILE: {certifi.where()}")
 
 import customtkinter as ctk
 from PIL import Image
@@ -287,10 +303,13 @@ class App(ctk.CTk):
 
         def _work():
             try:
+                log.info(f"Fetching info: {url}")
                 info = self.downloader.fetch_info(url)
+                log.info(f"Info OK: {info.title}")
                 self.current_info = info
                 self.after(0, lambda: self._display_info(info))
             except Exception as e:
+                log.error(f"Fetch failed: {traceback.format_exc()}")
                 self.after(0, lambda: self._set_status(f"조회 실패: {e}", "red"))
                 self.after(0, lambda: self.title_label.configure(text="조회 실패"))
             finally:
@@ -410,6 +429,7 @@ class App(ctk.CTk):
             self.after(0, lambda t=item.title: self._set_status(f"다운로드 중: {t}", "#ffc107"))
 
             try:
+                log.info(f"Downloading: {item.url} fmt={item.fmt} quality={item.quality} dir={self.output_dir}")
                 self.downloader.download(
                     url=item.url,
                     output_dir=self.output_dir,
@@ -418,10 +438,12 @@ class App(ctk.CTk):
                     progress_callback=lambda d: self.after(0, lambda d=d: self._on_progress(d)),
                 )
                 item.status = QueueItem.STATUS_DONE
+                log.info(f"Download OK: {item.title}")
             except Exception as e:
                 item.status = QueueItem.STATUS_ERROR
                 item.error_msg = str(e)
                 err = str(e)
+                log.error(f"Download failed: {item.url}\n{traceback.format_exc()}")
                 if "Cancelled" in err:
                     self.after(0, lambda: self._set_status("다운로드 취소됨", "orange"))
                     break
