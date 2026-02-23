@@ -25,8 +25,12 @@ jobs:
       - name: Find ffmpeg paths
         id: ffmpeg
         run: |
-          echo "ffmpeg=$(where ffmpeg | head -1)" >> $env:GITHUB_OUTPUT
-          echo "ffprobe=$(where ffprobe | head -1)" >> $env:GITHUB_OUTPUT
+          $ff = (where.exe ffmpeg | Select-Object -First 1)
+          $fp = (where.exe ffprobe | Select-Object -First 1)
+          echo "ffmpeg=$ff" >> $env:GITHUB_OUTPUT
+          echo "ffprobe=$fp" >> $env:GITHUB_OUTPUT
+          echo "Found ffmpeg: $ff"
+          echo "Found ffprobe: $fp"
 
       - name: Build with PyInstaller
         run: |
