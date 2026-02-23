@@ -1,10 +1,19 @@
 """YouTube Downloader - CustomTkinter GUI Application."""
 
 import io
+import os
+import ssl
+import sys
 import threading
 from pathlib import Path
 from tkinter import filedialog
 from urllib.request import urlopen
+
+# Fix SSL certificate issue in PyInstaller bundle
+if getattr(sys, "frozen", False):
+    import certifi
+    os.environ["SSL_CERT_FILE"] = certifi.where()
+    os.environ["REQUESTS_CA_BUNDLE"] = certifi.where()
 
 import customtkinter as ctk
 from PIL import Image
