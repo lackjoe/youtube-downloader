@@ -23,8 +23,15 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Build with PyInstaller
+        shell: bash
         run: |
-          pyinstaller --name "YouTube Downloader" --windowed --onedir --noconfirm --hidden-import "yt_dlp" --hidden-import "customtkinter" --hidden-import "certifi" --collect-all "customtkinter" --collect-all "certifi" --add-binary "$(where ffmpeg);." --add-binary "$(where ffprobe);." main.py
+          FFMPEG_PATH=$(which ffmpeg)
+          FFPROBE_PATH=$(which ffprobe)
+          pyinstaller --name "YouTube Downloader" --windowed --onedir --noconfirm \
+            --hidden-import "yt_dlp" --hidden-import "customtkinter" --hidden-import "certifi" \
+            --collect-all "customtkinter" --collect-all "certifi" \
+            --add-binary "$FFMPEG_PATH;." --add-binary "$FFPROBE_PATH;." \
+            main.py
 
       - name: Zip output
         run: Compress-Archive -Path "dist/YouTube Downloader" -DestinationPath "YouTube-Downloader-Windows.zip"
@@ -51,7 +58,11 @@ jobs:
 
       - name: Build with PyInstaller
         run: |
-          pyinstaller --name "YouTube Downloader" --windowed --onedir --noconfirm --hidden-import "yt_dlp" --hidden-import "customtkinter" --hidden-import "certifi" --collect-all "customtkinter" --collect-all "certifi" --add-binary "$(which ffmpeg):." --add-binary "$(which ffprobe):." main.py
+          pyinstaller --name "YouTube Downloader" --windowed --onedir --noconfirm \
+            --hidden-import "yt_dlp" --hidden-import "customtkinter" --hidden-import "certifi" \
+            --collect-all "customtkinter" --collect-all "certifi" \
+            --add-binary "$(which ffmpeg):." --add-binary "$(which ffprobe):." \
+            main.py
 
       - name: Zip output
         run: cd dist && zip -r ../YouTube-Downloader-macOS.zip "YouTube Downloader.app"
