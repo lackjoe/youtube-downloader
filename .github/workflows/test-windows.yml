@@ -1,0 +1,77 @@
+name: Test Windows Build
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install ffmpeg
+        run: choco install ffmpeg -y
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Build with PyInstaller
+        shell: pwsh
+        run: |
+          $ff = (where.exe ffmpeg | Select-Object -First 1)
+          $fp = (where.exe ffprobe | Select-Object -First 1)
+          pyinstaller --name "YouTube Downloader" --windowed --onedir --noconfirm `
+            --hidden-import "yt_dlp" --hidden-import "customtkinter" --hidden-import "certifi" `
+            --collect-all "customtkinter" --collect-all "certifi" `
+            --add-binary "$ff;." --add-binary "$fp;." `
+            main.py
+
+      - name: Test download with bundled app
+        shell: pwsh
+        run: |
+          $env:PATH = "dist\YouTube Downloader;" + $env:PATH
+          python -c @"
+          import sys, os
+          sys.path.insert(0, r'dist\YouTube Downloader\_internal')
+          os.environ['SSL_CERT_FILE'] = ''
+          os.environ['REQUESTS_CA_BUNDLE'] = ''
+
+          import certifi
+          os.environ['SSL_CERT_FILE'] = certifi.where()
+          os.environ['REQUESTS_CA_BUNDLE'] = certifi.where()
+          print(f'certifi: {certifi.where()}')
+          print(f'certifi exists: {os.path.exists(certifi.where())}')
+
+          from downloader import Downloader
+          dl = Downloader()
+
+          print('1. Fetching info...')
+          info = dl.fetch_info('https://www.youtube.com/watch?v=E6Niqxw_Yz0')
+          print(f'   Title: {info.title}')
+          print(f'   Channel: {info.channel}')
+          print(f'   Duration: {info.duration_str}')
+
+          print('2. Downloading 360p...')
+          dl.download(
+              'https://www.youtube.com/watch?v=E6Niqxw_Yz0',
+              os.environ['TEMP'],
+              fmt='video_audio',
+              quality='360',
+          )
+          print('   Download OK!')
+
+          print('3. Downloading audio MP3 128k...')
+          dl.download(
+              'https://www.youtube.com/watch?v=E6Niqxw_Yz0',
+              os.environ['TEMP'],
+              fmt='audio_only',
+              quality='128',
+          )
+          print('   Audio download OK!')
+
+          print('ALL TESTS PASSED')
+          "@
